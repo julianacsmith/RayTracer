@@ -1,0 +1,84 @@
+CameraLookAt 0 0 0
+CameraLookFrom 0 0 1
+CameraLookUp 0 1 0
+FieldOfView 90
+
+DirectionToLight 1.0 0.0 0.0
+LightColor 1.0 1.0 1.0
+AmbientLight 0.1 0.1 0.1
+BackgroundColor 0.2 0.2 0.2
+
+
+# white sphere
+Sphere
+  Center 0.5 0.0 -0.15
+  Radius 0.05
+  Kd 0.8
+  Ks 0.1
+  Ka 0.3
+  Od 1.0 1.0 1.0
+  Os 1.0 1.0 1.0
+  Kgls 4.0
+  Refl 0.0
+
+# red sphere
+Sphere
+  Center 0.3 0.0 -0.1
+  Radius 0.08
+  Kd 0.8
+  Ks 0.8
+  Ka 0.1
+  Od 1.0 0.0 0.0
+  Os 0.5 1.0 0.5
+  Kgls 32.0
+  Refl 0.0
+
+# green sphere
+Sphere
+  Center -0.6 0.0 0.0
+  Radius .3
+  Kd 0.7
+  Ks 0.5
+  Ka 0.1
+  Od 0.0 1.0 0.0
+  Os 0.5 1.0 0.5
+  Kgls 64.0
+  Refl 0.0
+
+# reflective sphere
+Sphere
+  Center 0.1 -0.55 0.25
+  Radius 0.3
+  Kd 0.0
+  Ks 0.1
+  Ka 0.1
+  Od 0.75 0.75 0.75
+  Os 1.0 1.0 1.0
+  Kgls 10.0
+  Refl 0.9
+
+# blue triangle
+Triangle
+  0.3 -0.3 -0.4
+  0.0 0.3 -0.1
+  -0.3 -0.3 0.2
+  Kd 0.9
+  Ks 0.9
+  Ka 0.1
+  Od 0.0 0.0 1.0
+  Os 1.0 1.0 1.0
+  Kgls 32.0
+  Refl 0.0
+
+# yellow triangle
+Triangle
+  -0.2 0.1 0.1
+  -0.2 -0.5 0.2
+  -0.2 0.1 -0.3
+  Kd 0.9
+  Ks 0.5
+  Ka 0.1
+  Od 1.0 1.0 0.0
+  Os 1.0 1.0 1.0
+  Kgls 4.0
+  Refl 0.0
