@@ -117,6 +117,8 @@ class RayTracer:
         self.image_height = 500
         # Sets default image to all black to be written over later
         self.image = np.zeros((self.image_height, self.image_width, 3))
+        self.max_bounce = 1
+        self.curr_bounce = 0
 
     # Reading in a specified image file
     def read_image(self, file_name):
@@ -261,7 +263,7 @@ class RayTracer:
         if not all(dist == -1 for dist in dists):
             # Find the closest point and associated object
             for i in range(len(dists)):
-                if dists[i] != -1 and dists[i] < t:
+                if 0 < dists[i] < t:
                     t = dists[i]
                     if dists.index(t) < len(self.spheres):
                         closest_object = self.spheres[i]
@@ -271,9 +273,24 @@ class RayTracer:
         # return the closest sphere and the intersection
         return closest_object, t, isSphere
 
+    def reflection_ray(self, V, N):
+        return V - 2 * np.dot(V, N) * N
+
     # Calculates the color of an intersecting object using the Phong Model
-    def phong_model(self, object, N, L, V):
+    def phong_model(self, object, N, L, V, ray, intersection):
+        pixel_color = np.array([0.0, 0.0, 0.0])
+
+        # Check if the point is in shadow. If it is, return black
+        shadowRay = Ray()
+        shadowRay.origin = intersection
+        shadowRay.direction = L
+        objectShadowIntersection, _, __ = self.nearest_obj_intersection(shadowRay)
+        if objectShadowIntersection is not None and objectShadowIntersection is not object:  # Shadows
+            return pixel_color
+
+
         ambient = object.ka * self.ambientLight * object.od
+        pixel_color += ambient
 
         # Check for if the dot product is greater than 0
         if np.dot(N, L) > 0:
@@ -281,6 +298,7 @@ class RayTracer:
         else:
             diffMax = 0
         diffuse = object.kd * self.lightColor * object.od * diffMax
+        pixel_color += diffuse
 
         R = 2 * np.dot(L, N) * N - L
         # Check for if the dot product is greater than 0
@@ -289,8 +307,37 @@ class RayTracer:
         else:
             specMax = 0
         spec = object.ks * self.lightColor * object.os * specMax ** object.kgls
+        pixel_color += spec
 
-        return ambient + diffuse + spec
+        reflection_color = np.array([0.0, 0.0, 0.0])  # Holds the reflection color to be added
+        if object.refl != 0.0:  # If the object has reflection
+
+            # First, make the reflection ray
+            reflectionRay = Ray()
+            reflectionRay.origin = intersection
+            reflectionRay.direction = self.reflection_ray(ray.direction, N)
+
+            # Check if the ray intersects another object
+            intersectingObject, t, isSphere = self.nearest_obj_intersection(reflectionRay)
+
+            # If nothing is intersected or it intersects with itself,
+            # then return the color of the background to be added
+            if intersectingObject is None or intersectingObject is object:
+                reflection_color += self.backgroundColor
+            else:
+                # Calculate the color of the new object
+                reflection_intersection = reflectionRay.origin + reflectionRay.direction * t
+                if isSphere:
+                    N = self.normalize(intersection - intersectingObject.center)
+                else:
+                    v1v2 = intersectingObject.v2 - intersectingObject.v1
+                    v1v3 = intersectingObject.v3 - intersectingObject.v1
+                    N = np.cross(v1v2, v1v3)
+                nudged = reflection_intersection + N * .0001
+                reflection_color += self.phong_model(intersectingObject, N, L, V, reflectionRay, nudged)
+                if np.count_nonzero(reflection_color) == 0:
+                    return reflection_color
+        return pixel_color + object.refl*reflection_color
 
     # Handles the ray tracing and determining the color of the pixel
     def ray_trace(self, ray, i, j):
@@ -300,11 +347,9 @@ class RayTracer:
         # If sphere is found, calculate its color
         if closest_object is not None:
             intersection = ray.origin + ray.direction * t
-
             intersection_to_light = np.linalg.norm(-self.directionToLight)
             if t < intersection_to_light:
                 self.image[i][j] = np.clip([0, 0, 0], 0, 1)
-
             if isSphere:
                 N = self.normalize(intersection - closest_object.center)
             else:
@@ -313,10 +358,11 @@ class RayTracer:
                 N = np.cross(v1v2, v1v3)
             L = self.normalize(self.directionToLight)
             V = self.normalize(-ray.direction)
-            pixel_color = self.phong_model(closest_object, N, L, V)
-            self.image[i][j] = np.clip(pixel_color, 0, 1)
+            nudged = intersection + N * .0001
+            pixel_color = self.phong_model(closest_object, N, L, V, ray, nudged)
         else:  # Otherwise paint the background color
-            self.image[i][j] = self.backgroundColor
+            pixel_color = self.backgroundColor
+        self.image[i][j] = np.clip(pixel_color, 0, 1)
 
     # Handles the intersections and rendering. Writes the output using plt.imsave and saves as a new png file
     def render(self):
@@ -326,6 +372,7 @@ class RayTracer:
         # For x and y
         for i, y in enumerate(np.linspace(screen[1], screen[3], self.image_height)):
             for j, x in enumerate(np.linspace(screen[0], screen[2], self.image_width)):
+                self.curr_bounce = 0
                 # Define the pixel we'll be working with (Only used for defining the ray's direction)
                 pixel = np.array([x, y, 0])
 
